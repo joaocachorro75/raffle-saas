@@ -1,75 +1,74 @@
 const router = require('express').Router();
-const Raffle = require('../models/Raffle');
+const db = require('../database');
 
-// Listar todas as rifas
-router.get('/', async (req, res) => {
-  try {
-    const raffles = await Raffle.find({ status: 'ativa' });
-    res.json(raffles);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// Listar todas as rifas ativas
+router.get('/', (req, res) => {
+  db.all(`SSELECT * FROM raffles WHERE status = 'ativa' OQER BY created_at DESC`, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
 });
 
 // Criar nova rifa
-router.post('/', async (req, res) => {
-  try {
-    const raffle = new Raffle(req.body);
-    await raffle.save();
-    res.status(201).json(raffle);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
+router.post('/', (req, res) => {
+  const { title, description, theme, prize, price, total_numbers, end_date } = req.body;
+  
+  db.run(`
+    INSERT INTO raffles (title, description, theme, prize, price, total_numbers, end_date, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'rinho')
+  `, [title, description, theme, prize, price, total_numbers, end_date, 'ativa'], function(err) {
+    if (err) return res.status(400).json({ error: err.message });
+    res.status(201).json();
+  });
 });
 
 // Buscar rifa por ID
-router.get('/:id', async (req, res) => {
-  try {
-    const raffle = await Raffle.findById(req.params.id);
-    if (!raffle) return res.status(404).json({ error: 'Rifa não encontrada' });
-    res.json(raffle);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+router.get('/:id', (req, res) => {
+  db.get('SELECT * FROM raffles WHERE id = ', [req.params.id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Rifa não encontrada' });
+    
+    // Buscar números vendidos
+    db.all('SELECT number FROM tickets WHERE raffle_id = ', [req.params.id], (err, tickets) => {
+      const soldNumbers = tickets.map(t => t.number);
+      res.json({ ...row, soldNumbers });
+    });
+  });
 });
 
 // Comprar número
-router.post('/:id/buy', async (req, res) => {
-  try {
-    const { number } = req.body;
-    const raffle = await Raffle.findById(req.params.id);
+router.post('/:id/buy', (req, res) => {
+  const { number, buyer_name, buyer_phone } = req.body;
+  const raffleId = req.params.id;
+  
+  // Verificar se número já existe
+  db.get('SELECT * FROM tickets WHERE raffle_id = ? AND number = ?', [raffleId, number], (err, ticket) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (ticket) return res.status(400).json({ error: 'Número já vendido' });
     
-    if (raffle.soldNumbers.includes(number)) {
-      return res.status(400).json({ error: 'Número já vendido' });
-    }
-    
-    raffle.soldNumbers.push(number);
-    await raffle.save();
-    
-    res.json({ message: 'Número comprado com sucesso!', number });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    // Criar ticket
+    db.run('INSERT INTO tickets (raffle_id, number, buyer_name, buyer_phone) VALUES (?, ?, ?, ?)', [raffleId, number, buyer_name, buyer_phone], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ message: 'Número comprado com sucesso!', number });
+    });
+  });
 });
 
 // Sortear vencedor
-router.post('/:id/draw', async (req, res) => {
-  try {
-    const raffle = await Raffle.findById(req.params.id);
+router.post('/:id/draw', (req, res) => {
+  const raffleId = req.params.id;
+  
+  db.all('SELECT number FROM tickets WHERE raffle_id = ', [raffleId], (err, tickets) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (tickets.length === 0) return res.status(400).json({ error: 'Nenhum número vendido' });
     
-    if (raffle.soldNumbers.length === 0) {
-      return res.status(400).json({ error: 'Nenhum número vendido' });
-    }
+    const winner = tickets[Math.floor(Math.random() * tickets.length)].number;
     
-    const randomIndex = Math.floor(Math.random() * raffle.soldNumbers.length);
-    raffle.winner = raffle.soldNumbers[randomIndex];
-    raffle.status = 'finalizada';
-    await raffle.save();
-    
-    res.json({ winner: raffle.winner });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    db.run('UPDATE raffles SET status = \'finalizada\', winner = ? WHERE id = ?', [winner, raffleId], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ winner });
+    });
+  });
 });
 
 module.exports = router;
