@@ -26,12 +26,12 @@ function Home() {
         ) : (
           <div className="grid">
             {raffles.map(raffle => (
-              <div key={raffle._id} className="raffle-card">
+              <div key={raffle.id} className="raffle-card">
                 <h3>{raffle.title}</h3>
                 <p>Prêmio: {raffle.prize}</p>
                 <p>Tema: {raffle.theme}</p>
                 <p>Valor: R$ {raffle.price}</p>
-                <Link to={`/rifa/${raffle._id}`} className="btn-secondary">
+                <Link to={`/rifa/${raffle.id}`} className="btn-secondary">
                   Ver Rifa
                 </Link>
               </div>

@@ -7,7 +7,7 @@ function ViewRaffle() {
   const [selectedNumber, setSelectedNumber] = useState(null);
 
   useEffect(() => {
-    fetch(\`/api/raffles/\${id}\`)
+    fetch(`/api/raffles/${id}`)
       .then(res => res.json())
       .then(data => setRaffle(data))
       .catch(err => console.error(err));
@@ -17,14 +17,14 @@ function ViewRaffle() {
     if (selectedNumber === null) return alert('Selecione um número!');
     
     try {
-      const response = await fetch(\`/api/raffles/\${id}/buy\`, {
+      const response = await fetch(`/api/raffles/${id}/buy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ number: selectedNumber })
       });
       
       if (response.ok) {
-        alert(\`Número \${selectedNumber} comprado com sucesso!\`);
+        alert(`Número ${selectedNumber} comprado com sucesso!`);
         window.location.reload();
       }
     } catch (error) {
@@ -56,7 +56,7 @@ function ViewRaffle() {
           {numbers.map(num => (
             <button
               key={num}
-              className={\`number-btn \${raffle.soldNumbers?.includes(num) ? 'sold' : ''} \${selectedNumber === num ? 'selected' : ''}\`}
+              className={`number-btn ${raffle.soldNumbers?.includes(num) ? 'sold' : ''} ${selectedNumber === num ? 'selected' : ''}`}
               disabled={raffle.soldNumbers?.includes(num)}
               onClick={() => setSelectedNumber(num)}
             >

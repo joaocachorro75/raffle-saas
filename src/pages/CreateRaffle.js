@@ -23,6 +23,7 @@ function CreateRaffle() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     try {
       const response = await fetch('/api/raffles', {
         method: 'POST',
@@ -30,13 +31,13 @@ function CreateRaffle() {
         body: JSON.stringify({
           ...formData,
           price: parseFloat(formData.price),
-          endDate: new Date(formData.endDate)
+          end_date: new Date(formData.endDate)
         })
       });
       
       if (response.ok) {
         const raffle = await response.json();
-        navigate(`/rifa/${raffle._id}`);
+        navigate(`/rifa/${raffle.id}`);
       }
     } catch (error) {
       console.error('Erro ao criar rifa:', error);
@@ -54,14 +55,12 @@ function CreateRaffle() {
           onChange={(e) => setFormData({...formData, title: e.target.value})}
           required
         />
-        
         <textarea
           placeholder="Descrição"
           value={formData.description}
           onChange={(e) => setFormData({...formData, description: e.target.value})}
           required
         />
-        
         <select
           value={formData.theme}
           onChange={(e) => setFormData({...formData, theme: e.target.value})}
@@ -70,7 +69,6 @@ function CreateRaffle() {
             <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </select>
-        
         <input
           type="text"
           placeholder="Prêmio"
@@ -78,7 +76,6 @@ function CreateRaffle() {
           onChange={(e) => setFormData({...formData, prize: e.target.value})}
           required
         />
-        
         <input
           type="number"
           placeholder="Valor do Bilhete (R$)"
@@ -86,21 +83,18 @@ function CreateRaffle() {
           onChange={(e) => setFormData({...formData, price: e.target.value})}
           required
         />
-        
         <input
           type="number"
           placeholder="Quantidade de Números"
           value={formData.totalNumbers}
           onChange={(e) => setFormData({...formData, totalNumbers: e.target.value})}
         />
-        
         <input
           type="datetime-local"
           value={formData.endDate}
           onChange={(e) => setFormData({...formData, endDate: e.target.value})}
           required
         />
-        
         <button type="submit" className="btn-primary">Criar Rifa</button>
       </form>
     </div>
